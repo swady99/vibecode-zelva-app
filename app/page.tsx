@@ -9,6 +9,10 @@ type ExpenseCategory =
   | "coffee"
   | "groceries"
   | "transport"
+  | "travel"
+  | "tickets"
+  | "cinema"
+  | "subscriptions"
   | "shopping"
   | "other";
 
@@ -30,16 +34,15 @@ const CATEGORY_KEYWORDS: Record<ExpenseCategory, string[]> = {
   coffee: ["coffee", "latte", "espresso", "cappuccino", "tea"],
   groceries: ["groceries", "grocery", "supermarket", "market", "milk", "bread"],
   transport: ["uber", "taxi", "train", "bus", "metro", "fuel", "gas", "parking"],
+  travel: ["flight", "train", "plane", "hotel", "airbnb", "airport", "travel"],
+  tickets: ["ticket", "tickets", "pass", "fare"],
+  cinema: ["movie", "cinema", "film", "theater", "theatre", "imax"],
+  subscriptions: ["subscription", "netflix", "spotify", "prime", "disney", "apple", "sub"],
   shopping: ["shopping", "shirt", "shoes", "clothes", "store", "bought"],
   other: [],
 };
 
 const INITIAL_MESSAGES: ChatMessageData[] = [
-  {
-    id: 1,
-    role: "assistant",
-    text: 'Ready when you are. Try "Spent 120 SEK on lunch".',
-  },
 ];
 
 function normalizeCurrency(input: string) {
@@ -99,9 +102,12 @@ function buildAssistantResponse(
   parsedExpense: ParsedExpense | null,
   similarExpenseCount: number,
   dailyTotal: number,
+  categoryCounts: Record<ExpenseCategory, number>,
+  nextXp: number,
+  nextStreak: number,
 ) {
   if (!parsedExpense) {
-    return 'I missed the amount there. Try "Spent 120 SEK on lunch".';
+    return ['I missed the amount there. Try "Spent 120 SEK on lunch".'];
   }
 
   const { amount, currency, category } = parsedExpense;
@@ -109,66 +115,136 @@ function buildAssistantResponse(
   const formattedTotal = formatAmount(dailyTotal, currency);
   const pick = (options: string[]) => options[Math.floor(Math.random() * options.length)];
 
+  const withExtras = (main: string) => {
+    let extra: string | null = null;
+
+    const useXp = Math.random() < 0.35;
+    const useStreak = !useXp && nextStreak > 0 && Math.random() < 0.35;
+
+    if (useXp) {
+      const xpSnippets = [
+        "+5 XP—consistent logging",
+        "+5 XP. Nice and steady.",
+        "+5 XP. Little steps count.",
+      ];
+      extra = pick(xpSnippets);
+    } else if (useStreak) {
+      const streakSnippets = [
+        `${nextStreak} day streak. Keep it warm 🔥`,
+        `${nextStreak} days in a row—love the habit`,
+        `Streak at ${nextStreak}. Stay in rhythm.`,
+      ];
+      extra = pick(streakSnippets);
+    }
+
+    return [extra ? `${main} ${extra}` : main];
+  };
+
   if (category === "coffee") {
     const templates = [
-      `Another coffee? (${similarExpenseCount} today). Caffeine level rising ☕️. Total’s ${formattedTotal}.`,
-      `${formattedAmount} for coffee. I’ll allow it—just keep an eye on that drip. Total: ${formattedTotal}.`,
-      `Coffee logged. Pace yourself, barista-in-training. You’re at ${formattedTotal} today.`,
+      `Coffee #${similarExpenseCount} today. Easy on the espresso ☕️`,
+      `Coffee again? Sneaky one ☕️`,
+      `Caffeine meter is climbing ☕️`,
     ];
-    return pick(templates);
+    const main = `${pick(templates)} You’re at ${formattedTotal} today.`;
+    return withExtras(main);
   }
 
   if (category === "food") {
     const templates = [
-      `${formattedAmount} for food—treat yourself 🍽️. Total so far: ${formattedTotal}.`,
-      `Fueling up. That’s food #${similarExpenseCount} today. Total’s ${formattedTotal}.`,
-      `Nice pick. ${formattedAmount} on food. You’re sitting at ${formattedTotal} today.`,
+      `Food #${similarExpenseCount} today—looks tasty 🍽️`,
+      `Good choice. ${formattedAmount} on food.`,
+      `Fueling up. ${formattedAmount}.`,
     ];
-    return pick(templates);
+    const main = `${pick(templates)} You’re at ${formattedTotal} today.`;
+    return withExtras(main);
   }
 
   if (category === "groceries") {
     const templates = [
-      `Groceries in the bag. Running total: ${formattedTotal}.`,
-      `Stocked up. You’re at ${formattedTotal} today.`,
-      `${formattedAmount} on groceries. Pantry is happy; total is ${formattedTotal}.`,
+      `Groceries sorted. ${formattedAmount}.`,
+      `Pantry wins. ${formattedAmount}.`,
+      `Restock done. ${formattedAmount}.`,
     ];
-    return pick(templates);
+    const main = `${pick(templates)} Total: ${formattedTotal}.`;
+    return withExtras(main);
   }
 
   if (category === "transport") {
     const templates = [
-      `${formattedAmount} on getting around. Today’s total is ${formattedTotal}.`,
-      `Ride logged. You’re at ${formattedTotal} for the day.`,
-      `${formattedAmount} for transport. Total stands at ${formattedTotal}.`,
+      `${formattedAmount} to get around.`,
+      `Ride covered: ${formattedAmount}.`,
+      `Transit spend: ${formattedAmount}.`,
     ];
-    return pick(templates);
+    const main = `${pick(templates)} Total is ${formattedTotal}.`;
+    return withExtras(main);
   }
 
   if (category === "shopping") {
     const templates = [
-      `${formattedAmount} on shopping. Treat yo’ self—total is ${formattedTotal}.`,
-      `Shopping spree noted 👀 Total today: ${formattedTotal}.`,
-      `Retail therapy logged. You’re at ${formattedTotal} now.`,
+      `Shopping vibe today 👀 ${formattedAmount}.`,
+      `A little treat? ${formattedAmount}.`,
+      `Retail therapy approved. ${formattedAmount}.`,
     ];
-    return pick(templates);
+    const main = `${pick(templates)} Total now ${formattedTotal}.`;
+    return withExtras(main);
+  }
+
+  if (category === "travel") {
+    const templates = [
+      `Travel mode on ✈️ ${formattedAmount}.`,
+      `Trip spend: ${formattedAmount}.`,
+      `Adventure fund: ${formattedAmount}.`,
+    ];
+    const main = `${pick(templates)} Total is ${formattedTotal}.`;
+    return withExtras(main);
+  }
+
+  if (category === "tickets") {
+    const templates = [
+      `Tickets sorted. ${formattedAmount}.`,
+      `Seat secured for ${formattedAmount}.`,
+      `Ticket spend: ${formattedAmount}.`,
+    ];
+    const main = `${pick(templates)} You’re at ${formattedTotal} today.`;
+    return withExtras(main);
+  }
+
+  if (category === "cinema") {
+    const templates = [
+      `Movie time 🎬 ${formattedAmount}.`,
+      `Cinema night for ${formattedAmount}.`,
+      `Film fix: ${formattedAmount}.`,
+    ];
+    const main = `${pick(templates)} Total today ${formattedTotal}.`;
+    return withExtras(main);
+  }
+
+  if (category === "subscriptions") {
+    const templates = [
+      `Sub renewed: ${formattedAmount}.`,
+      `${formattedAmount} on subs. Worth it?`,
+      `Keeping the subs rolling: ${formattedAmount}.`,
+    ];
+    const main = `${pick(templates)} Running total ${formattedTotal}.`;
+    return withExtras(main);
   }
 
   if (dailyTotal >= 200) {
     const templates = [
-      `${formattedAmount}. You’ve crossed ${formattedTotal} today—nice momentum.`,
-      `${formattedAmount} logged. Totals sit at ${formattedTotal}.`,
-      `Saved it. You’re now at ${formattedTotal} today.`,
+      `${formattedAmount}. You’ve crossed ${formattedTotal} today.`,
+      `${formattedAmount}. Total sits at ${formattedTotal}.`,
+      `${formattedAmount}. You’re already at ${formattedTotal}.`,
     ];
-    return pick(templates);
+    return withExtras(pick(templates));
   }
 
   const templates = [
-    `${formattedAmount} saved. Total so far: ${formattedTotal}.`,
-    `${formattedAmount}. Easy. You’re sitting at ${formattedTotal}.`,
-    `${formattedAmount} logged. Running total is ${formattedTotal}.`,
+    `${formattedAmount}. Total so far ${formattedTotal}.`,
+    `${formattedAmount}. You’re at ${formattedTotal}.`,
+    `${formattedAmount}. Running total ${formattedTotal}.`,
   ];
-  return pick(templates);
+  return withExtras(pick(templates));
 }
 
 function AppHeader() {
@@ -275,9 +351,22 @@ export default function Home() {
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [isPendingReply, setIsPendingReply] = useState(false);
+  const [categoryCounts, setCategoryCounts] = useState<Record<ExpenseCategory, number>>({
+    food: 0,
+    coffee: 0,
+    groceries: 0,
+    transport: 0,
+    travel: 0,
+    tickets: 0,
+    cinema: 0,
+    subscriptions: 0,
+    shopping: 0,
+    other: 0,
+  });
 
   const nextMessageId = useRef(2);
   const chatViewportRef = useRef<HTMLDivElement>(null);
+  const hasSentCheckIn = useRef(false);
 
   const expenseMessages = useMemo(
     () => messages.filter((message) => message.parsedExpense),
@@ -290,6 +379,22 @@ export default function Home() {
       behavior: "smooth",
     });
   }, [messages]);
+
+  useEffect(() => {
+    if (hasSentCheckIn.current) return;
+
+    hasSentCheckIn.current = true;
+    const hasExpenses = expenseMessages.length > 0;
+    const checkInMessage: ChatMessageData = {
+      id: nextMessageId.current++,
+      role: "assistant",
+      text: hasExpenses
+        ? `You're at ${formatAmount(dailyTotal, "SEK")} today. Anything else?`
+        : "What did you spend today?",
+    };
+
+    setMessages([checkInMessage]);
+  }, [dailyTotal, expenseMessages.length]);
 
   const handleSubmit = () => {
     const trimmedValue = inputValue.trim();
@@ -317,21 +422,34 @@ export default function Home() {
       : 0;
 
     const nextDailyTotal = parsedExpense ? dailyTotal + parsedExpense.amount : dailyTotal;
+    const nextStreak = parsedExpense ? (streak === 0 ? 1 : streak) : streak;
+    const nextXp = parsedExpense ? xp + 5 : xp;
 
     if (parsedExpense) {
       setDailyTotal(nextDailyTotal);
-      setXp((currentXp) => currentXp + 5);
-      setStreak((currentStreak) => (currentStreak === 0 ? 1 : currentStreak));
+      setXp(nextXp);
+      setStreak(nextStreak);
+      setCategoryCounts((current) => ({
+        ...current,
+        [parsedExpense.category]: (current[parsedExpense.category] ?? 0) + 1,
+      }));
     }
 
-    const assistantMessage: ChatMessageData = {
+    const assistantMessages = buildAssistantResponse(
+      parsedExpense,
+      similarExpenseCount,
+      nextDailyTotal,
+      categoryCounts,
+      nextXp,
+      nextStreak,
+    ).map((line) => ({
       id: nextMessageId.current++,
-      role: "assistant",
-      text: buildAssistantResponse(parsedExpense, similarExpenseCount, nextDailyTotal),
-    };
+      role: "assistant" as const,
+      text: line,
+    }));
 
     window.setTimeout(() => {
-      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
+      setMessages((currentMessages) => [...currentMessages, ...assistantMessages]);
       setIsPendingReply(false);
     }, 420);
   };
