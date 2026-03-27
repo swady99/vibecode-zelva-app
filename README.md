@@ -1,2 +1,13 @@
 # vibecode-zelva-app
- **chat-based AI companion** where users log expenses naturally.  ##  What is this?  **A gamified AI companion** that helps people improve their spending habits through daily conversations. ## Created the UI and added Streak, XP and Total. 
+
+Chat-first personal finance companion where users log expenses naturally and build habits with streaks, XP, and light coaching.
+
+## Develop
+
+```
+npm run dev
+```
+
+Visit http://localhost:3000
+
+Edit `app/page.tsx` to tweak the chat experience.
