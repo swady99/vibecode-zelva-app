@@ -38,12 +38,22 @@ const INITIAL_MESSAGES: ChatMessageData[] = [
   {
     id: 1,
     role: "assistant",
-    text: "Ready when you are. Log an expense like “Spent 120 SEK on lunch”.",
+    text: 'Ready when you are. Try "Spent 120 SEK on lunch".',
   },
 ];
 
+function normalizeCurrency(input: string) {
+  const normalizedInput = input.trim().toLowerCase();
+
+  if (["kr", "krs", "sek", "krona", "kronor"].includes(normalizedInput)) {
+    return "SEK";
+  }
+
+  return input.toUpperCase();
+}
+
 function formatAmount(amount: number, currency: string) {
-  const normalizedCurrency = currency.toUpperCase();
+  const normalizedCurrency = normalizeCurrency(currency);
 
   try {
     return new Intl.NumberFormat("en-US", {
@@ -69,8 +79,8 @@ function parseExpense(input: string): ParsedExpense | null {
     return null;
   }
 
-  const currencyMatch = input.match(/\b([A-Za-z]{3})\b/);
-  const currency = currencyMatch ? currencyMatch[1].toUpperCase() : "SEK";
+  const currencyMatch = input.match(/\b(sek|kr|krs|krona|kronor|[A-Za-z]{3})\b/i);
+  const currency = currencyMatch ? normalizeCurrency(currencyMatch[1]) : "SEK";
   const normalizedInput = input.toLowerCase();
 
   const category =
@@ -91,78 +101,113 @@ function buildAssistantResponse(
   dailyTotal: number,
 ) {
   if (!parsedExpense) {
-    return "I couldn’t spot the amount there. Try something like “Spent 120 SEK on lunch”.";
+    return 'I missed the amount there. Try "Spent 120 SEK on lunch".';
   }
 
   const { amount, currency, category } = parsedExpense;
   const formattedAmount = formatAmount(amount, currency);
   const formattedTotal = formatAmount(dailyTotal, currency);
+  const pick = (options: string[]) => options[Math.floor(Math.random() * options.length)];
 
   if (category === "coffee") {
-    if (similarExpenseCount >= 2) {
-      return `Coffee run number ${similarExpenseCount} today. You’re at ${formattedTotal} so far.`;
-    }
-
-    return `Logged ${formattedAmount} for coffee. Small spend, but they add up.`;
+    const templates = [
+      `Another coffee? (${similarExpenseCount} today). Caffeine level rising ☕️. Total’s ${formattedTotal}.`,
+      `${formattedAmount} for coffee. I’ll allow it—just keep an eye on that drip. Total: ${formattedTotal}.`,
+      `Coffee logged. Pace yourself, barista-in-training. You’re at ${formattedTotal} today.`,
+    ];
+    return pick(templates);
   }
 
   if (category === "food") {
-    if (similarExpenseCount === 2) {
-      return `That’s your second food expense today. Total is ${formattedTotal}.`;
-    }
-
-    return `Food spend noted. You’re at ${formattedTotal} today already.`;
+    const templates = [
+      `${formattedAmount} for food—treat yourself 🍽️. Total so far: ${formattedTotal}.`,
+      `Fueling up. That’s food #${similarExpenseCount} today. Total’s ${formattedTotal}.`,
+      `Nice pick. ${formattedAmount} on food. You’re sitting at ${formattedTotal} today.`,
+    ];
+    return pick(templates);
   }
 
   if (category === "groceries") {
-    return `Groceries logged. ${formattedTotal} spent today so far.`;
+    const templates = [
+      `Groceries in the bag. Running total: ${formattedTotal}.`,
+      `Stocked up. You’re at ${formattedTotal} today.`,
+      `${formattedAmount} on groceries. Pantry is happy; total is ${formattedTotal}.`,
+    ];
+    return pick(templates);
   }
 
   if (category === "transport") {
-    return `Transport logged. ${formattedAmount} added, total now ${formattedTotal}.`;
+    const templates = [
+      `${formattedAmount} on getting around. Today’s total is ${formattedTotal}.`,
+      `Ride logged. You’re at ${formattedTotal} for the day.`,
+      `${formattedAmount} for transport. Total stands at ${formattedTotal}.`,
+    ];
+    return pick(templates);
   }
 
   if (category === "shopping") {
-    return `Shopping noted. Keep an eye on it, you’re at ${formattedTotal} today.`;
+    const templates = [
+      `${formattedAmount} on shopping. Treat yo’ self—total is ${formattedTotal}.`,
+      `Shopping spree noted 👀 Total today: ${formattedTotal}.`,
+      `Retail therapy logged. You’re at ${formattedTotal} now.`,
+    ];
+    return pick(templates);
   }
 
   if (dailyTotal >= 200) {
-    return `Logged ${formattedAmount}. You’re at ${formattedTotal} today already.`;
+    const templates = [
+      `${formattedAmount}. You’ve crossed ${formattedTotal} today—nice momentum.`,
+      `${formattedAmount} logged. Totals sit at ${formattedTotal}.`,
+      `Saved it. You’re now at ${formattedTotal} today.`,
+    ];
+    return pick(templates);
   }
 
-  return `Saved ${formattedAmount}. Clean log, and your total is now ${formattedTotal}.`;
+  const templates = [
+    `${formattedAmount} saved. Total so far: ${formattedTotal}.`,
+    `${formattedAmount}. Easy. You’re sitting at ${formattedTotal}.`,
+    `${formattedAmount} logged. Running total is ${formattedTotal}.`,
+  ];
+  return pick(templates);
 }
 
-function AppHeader({
-  streak,
-  xp,
-}: {
-  streak: number;
-  xp: number;
-}) {
+function AppHeader() {
   return (
-    <header className="flex items-center justify-between px-4 py-3">
-      <div>
-        <p className="text-lg font-semibold tracking-tight text-white">Zelva</p>
-        <div className="mt-1 flex items-center gap-3 text-xs text-[#8E8E93]">
-          <span>🔥 {streak} day streak</span>
-          <span>⚡ {xp} XP</span>
-        </div>
+    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-1 pt-4">
+      <div className="min-w-0" />
+
+      <div className="text-center">
+        <p className="font-brand text-[1.9rem] tracking-[0.22em] text-white">ZELVA</p>
       </div>
-      <button
-        type="button"
-        aria-label="Settings"
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1E] text-[#8E8E93] transition-colors hover:text-white"
-      >
-        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 3.75v2.5m0 11.5v2.5m8.25-8.25h-2.5M6.25 12h-2.5m12.084-5.834-1.768 1.768M8.934 15.066l-1.768 1.768m8.668 0-1.768-1.768M8.934 8.934 7.166 7.166M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-          />
-        </svg>
-      </button>
+
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          aria-label="Settings"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1E] text-[#8E8E93] transition-colors hover:text-white"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 3.75v2.5m0 11.5v2.5m8.25-8.25h-2.5M6.25 12h-2.5m12.084-5.834-1.768 1.768M8.934 15.066l-1.768 1.768m8.668 0-1.768-1.768M8.934 8.934 7.166 7.166M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+            />
+          </svg>
+        </button>
+      </div>
     </header>
+  );
+}
+
+function HeaderStats({ streak, xp, dailyTotal }: { streak: number; xp: number; dailyTotal: number }) {
+  return (
+    <div className="px-4 pb-3">
+      <div className="flex items-center justify-between rounded-full bg-[#111113] px-4 py-2 text-[12px] text-[#D1D1D6]">
+        <span>🔥 {streak} streak</span>
+        <span>⚡ {xp} XP</span>
+        <span>💰 {formatAmount(dailyTotal, "SEK")}</span>
+      </div>
+    </div>
   );
 }
 
@@ -172,8 +217,8 @@ function ChatMessage({ message }: { message: ChatMessageData }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[82%] rounded-[22px] px-4 py-3 text-[15px] leading-6 shadow-[0_6px_18px_rgba(0,0,0,0.18)] ${
-          isUser ? "rounded-br-md bg-[#0A84FF] text-white" : "rounded-bl-md bg-[#1C1C1E] text-white"
+        className={`max-w-[78%] rounded-[22px] px-4 py-3 text-[15px] leading-[1.45] shadow-[0_10px_24px_rgba(0,0,0,0.18)] ${
+          isUser ? "rounded-br-lg bg-[#0A84FF] text-white" : "rounded-bl-lg bg-[#1C1C1E] text-white"
         }`}
       >
         {message.text}
@@ -288,35 +333,16 @@ export default function Home() {
     window.setTimeout(() => {
       setMessages((currentMessages) => [...currentMessages, assistantMessage]);
       setIsPendingReply(false);
-    }, 500);
+    }, 420);
   };
 
   return (
     <main className="flex min-h-screen justify-center bg-black text-white">
       <div className="flex min-h-screen w-full max-w-md flex-col bg-black">
-        <AppHeader streak={streak} xp={xp} />
+        <AppHeader dailyTotal={dailyTotal} />
+        <HeaderStats streak={streak} xp={xp} dailyTotal={dailyTotal} />
 
-        <section className="px-4 pb-3">
-          <div className="rounded-[24px] bg-[#111113] px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#8E8E93]">Today</p>
-            <div className="mt-2 flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-semibold tracking-tight text-white">
-                  {formatAmount(dailyTotal, "SEK")}
-                </p>
-                <p className="mt-1 text-sm text-[#8E8E93]">Daily total</p>
-              </div>
-              <p className="text-right text-sm text-[#8E8E93]">
-                {expenseMessages.length} logged
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <div
-          ref={chatViewportRef}
-          className="flex-1 space-y-3 overflow-y-auto px-4 pb-6 pt-2"
-        >
+        <div ref={chatViewportRef} className="flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-3">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
