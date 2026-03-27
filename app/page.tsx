@@ -42,8 +42,7 @@ const CATEGORY_KEYWORDS: Record<ExpenseCategory, string[]> = {
   other: [],
 };
 
-const INITIAL_MESSAGES: ChatMessageData[] = [
-];
+const INITIAL_MESSAGES: ChatMessageData[] = [];
 
 function normalizeCurrency(input: string) {
   const normalizedInput = input.trim().toLowerCase();
@@ -102,7 +101,7 @@ function buildAssistantResponse(
   parsedExpense: ParsedExpense | null,
   similarExpenseCount: number,
   dailyTotal: number,
-  categoryCounts: Record<ExpenseCategory, number>,
+  _categoryCounts: Record<ExpenseCategory, number>,
   nextXp: number,
   nextStreak: number,
 ) {
@@ -249,11 +248,11 @@ function buildAssistantResponse(
 
 function AppHeader() {
   return (
-    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-1 pt-4">
+    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-1 pt-3 sm:pt-4">
       <div className="min-w-0" />
 
       <div className="text-center">
-        <p className="font-brand text-[1.9rem] tracking-[0.22em] text-white">ZELVA</p>
+        <p className="font-brand text-[1.75rem] tracking-[0.22em] text-white sm:text-[1.9rem]">ZELVA</p>
       </div>
 
       <div className="flex items-center justify-end">
@@ -278,7 +277,7 @@ function AppHeader() {
 function HeaderStats({ streak, xp, dailyTotal }: { streak: number; xp: number; dailyTotal: number }) {
   return (
     <div className="px-4 pb-3">
-      <div className="flex items-center justify-between rounded-full bg-[#111113] px-4 py-2 text-[12px] text-[#D1D1D6]">
+      <div className="flex items-center justify-between rounded-full bg-[#111113] px-3 py-2 text-[12px] text-[#D1D1D6] sm:px-4">
         <span>🔥 {streak} streak</span>
         <span>⚡ {xp} XP</span>
         <span>💰 {formatAmount(dailyTotal, "SEK")}</span>
@@ -291,9 +290,9 @@ function ChatMessage({ message }: { message: ChatMessageData }) {
   const isUser = message.role === "user";
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} px-1`}>
       <div
-        className={`max-w-[78%] rounded-[22px] px-4 py-3 text-[15px] leading-[1.45] shadow-[0_10px_24px_rgba(0,0,0,0.18)] ${
+        className={`max-w-[82%] sm:max-w-[75%] rounded-[20px] px-4 py-3 text-[15px] leading-[1.45] shadow-[0_10px_24px_rgba(0,0,0,0.18)] ${
           isUser ? "rounded-br-lg bg-[#0A84FF] text-white" : "rounded-bl-lg bg-[#1C1C1E] text-white"
         }`}
       >
@@ -320,9 +319,9 @@ function ChatInput({
         event.preventDefault();
         onSubmit();
       }}
-      className="border-t border-white/5 bg-black/95 px-4 pb-5 pt-3 backdrop-blur"
+      className="sticky bottom-0 left-0 right-0 border-t border-white/5 bg-black/95 px-3 pb-[max(1.1rem,env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur"
     >
-      <div className="flex items-end gap-3 rounded-[28px] bg-[#1C1C1E] px-3 py-2">
+      <div className="flex items-end gap-2 rounded-[26px] bg-[#1C1C1E] px-3 py-2 sm:gap-3 sm:rounded-[28px]">
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -333,7 +332,7 @@ function ChatInput({
           type="submit"
           aria-label="Send message"
           disabled={isPending}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0A84FF] text-white transition-opacity disabled:opacity-60"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0A84FF] text-white transition-opacity disabled:opacity-60 sm:h-12 sm:w-12"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
             <path d="M4.47 3.85a.75.75 0 0 1 .79-.08l13.5 7.13a1.25 1.25 0 0 1 0 2.2L5.26 20.23A.75.75 0 0 1 4.2 19.5l1.12-5.34a.75.75 0 0 1 .55-.57l5.14-1.34-5.14-1.34a.75.75 0 0 1-.55-.57L4.2 4.5a.75.75 0 0 1 .27-.65Z" />
@@ -456,11 +455,14 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen justify-center bg-black text-white">
-      <div className="flex min-h-screen w-full max-w-md flex-col bg-black">
-        <AppHeader dailyTotal={dailyTotal} />
+      <div className="flex min-h-screen w-full max-w-md flex-col bg-black sm:max-w-[480px]">
+        <AppHeader />
         <HeaderStats streak={streak} xp={xp} dailyTotal={dailyTotal} />
 
-        <div ref={chatViewportRef} className="flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-3">
+        <div
+          ref={chatViewportRef}
+          className="flex-1 space-y-3 overflow-y-auto px-3 pb-4 pt-2 sm:space-y-4 sm:px-4 sm:pb-6 sm:pt-3"
+        >
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
